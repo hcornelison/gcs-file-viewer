@@ -11,6 +11,8 @@ permissions:
   contents: read
 
 jobs:
+  # No macOS package: without an Apple Developer ID signature and notarization, macOS refuses to launch a
+  # downloaded app. scripts/package-macos.sh still builds one locally for the Mac it runs on.
   package:
     strategy:
       fail-fast: false
@@ -18,8 +20,6 @@ jobs:
         include:
           - { rid: win-x64, os: windows-latest }
           - { rid: win-arm64, os: windows-latest }
-          - { rid: osx-arm64, os: macos-latest }
-          - { rid: osx-x64, os: macos-latest }
           - { rid: linux-x64, os: ubuntu-latest }
           - { rid: linux-arm64, os: ubuntu-latest }
     runs-on: ${{ matrix.os }}
@@ -51,10 +51,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path publish/GcsFileViewer -DestinationPath "dist/GcsFileViewer-$env:VERSION-${{ matrix.rid }}.zip"
-
-      - name: Package for macOS
-        if: runner.os == 'macOS'
-        run: scripts/package-macos.sh ${{ matrix.rid }} "$VERSION" dist
 
       - name: Package for Linux
         if: runner.os == 'Linux'

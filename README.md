@@ -205,9 +205,10 @@ Pushing a tag like `v1.2.3` runs `.github/workflows/release.yml`, which builds t
 | Platform | File | Install |
 |---|---|---|
 | Windows (x64, Arm64) | `GcsFileViewer-<version>-win-<arch>.zip` | Unzip and run `GcsFileViewer.exe`. |
-| macOS (Apple silicon, Intel) | `GcsFileViewer-<version>-osx-<arch>.zip` | Unzip and move `GCS File Viewer.app` to Applications. |
 | Debian and Ubuntu (x64, Arm64) | `gcs-file-viewer_<version>_<arch>.deb` | `sudo apt install ./gcs-file-viewer_<version>_<arch>.deb`, then start it from the app menu or run `gcs-file-viewer`. |
 | Other Linux (x64, Arm64) | `GcsFileViewer-<version>-linux-<arch>.tar.gz` | Extract and run `gcs-file-viewer/GcsFileViewer`. |
+
+There is no macOS package. An app downloaded from the internet has to be signed with a paid Apple Developer ID and notarized before macOS will launch it, and this project has neither. On macOS, build it from source: see [Run](#run), or [Building a package locally](#building-a-package-locally) for a double-clickable app.
 
 ```bash
 git tag v1.2.3
@@ -218,34 +219,33 @@ Running the workflow by hand from the Actions tab builds the same packages as wo
 
 Every package contains the project's `LICENSE` and a `THIRD-PARTY-NOTICES.txt` listing the libraries bundled inside it with their licences. `scripts/make-notices.py` writes that file during packaging from what was actually published, so it cannot fall out of date.
 
-### First launch warnings
+### First launch warning
 
-The packages are not signed with a paid code signing certificate, so Windows and macOS warn about them once:
-
-- **Windows** shows "Windows protected your PC". Choose **More info**, then **Run anyway**.
-- **macOS** says the app can't be opened. Open **System Settings > Privacy & Security**, scroll to the message about GCS File Viewer and choose **Open Anyway**.
+The packages are not signed with a paid code signing certificate, so Windows warns about them once: it shows "Windows protected your PC". Choose **More info**, then **Run anyway**.
 
 ### Verifying a download
 
 Each release includes a `SHA256SUMS` file. While the repository is public, the release also carries a signed [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) for every file, which proves the file was built by this repository's release workflow from the tagged commit. Check one with the [GitHub CLI](https://cli.github.com):
 
 ```bash
-gh attestation verify GcsFileViewer-1.2.3-osx-arm64.zip --repo hcornelison/gcs-file-viewer
+gh attestation verify GcsFileViewer-1.2.3-win-x64.zip --repo hcornelison/gcs-file-viewer
 ```
-
-GitHub does not offer attestations to private repositories, so the workflow skips that step until the repository is public.
 
 ### Building a package locally
-
-```bash
-scripts/package-macos.sh osx-arm64 1.2.3 dist
-```
 
 ```bash
 scripts/package-linux.sh linux-x64 1.2.3 dist
 ```
 
-The macOS script needs macOS. The Linux script builds the `.tar.gz` anywhere and the `.deb` where `dpkg-deb` is installed.
+This builds the `.tar.gz` anywhere and the `.deb` where `dpkg-deb` is installed.
+
+On macOS, this builds `GCS File Viewer.app` and zips it into `dist` (use `osx-x64` on an Intel Mac):
+
+```bash
+scripts/package-macos.sh osx-arm64 1.2.3 dist
+```
+
+Unzip it and move the app to Applications. An app built on your own Mac opens normally; the same zip sent to another Mac would be blocked there.
 
 ## Project layout
 

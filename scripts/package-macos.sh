@@ -3,8 +3,8 @@
 # Usage: scripts/package-macos.sh <osx-arm64|osx-x64> <version> <output directory>
 # macOS only: it uses codesign and ditto.
 #
-# The app is ad-hoc signed, not signed with an Apple Developer ID, so Gatekeeper blocks the first launch
-# until the user allows it under System Settings > Privacy & Security.
+# The app is ad-hoc signed, not signed with an Apple Developer ID and notarized, so it only opens on the Mac
+# that built it; Gatekeeper blocks it once it has been downloaded. That is why releases have no macOS package.
 set -eu
 
 rid=$1
