@@ -4,6 +4,8 @@ Notable changes to GCS File Viewer. The format follows [Keep a Changelog](https:
 
 ## Unreleased
 
+## 0.1.1 - 2026-10-12
+
 ### Removed
 
 - The macOS packages. Without an Apple Developer ID signature and notarization macOS will not launch a downloaded app, so on macOS the app is built from source instead.
