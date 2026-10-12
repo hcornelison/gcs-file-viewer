@@ -254,7 +254,7 @@ Each library depends only on the ones above it in the table, so the storage laye
 
 `scripts/` holds the packaging scripts, and `packaging/licenses` the standard licence texts they put in the notices file.
 
-The app icon is drawn in `src/GcsFileViewer/Assets/icon.svg`. After changing it, run `scripts/make-icon.sh` (macOS only) to rebuild the `.png`, `.ico` and `.icns` files beside it.
+The app icon is drawn in `src/GcsFileViewer/Assets/icon.svg`. After changing it, run `scripts/make-icon.sh` (macOS only) to rebuild the `.png` and `.ico` files beside it.
 
 `GcsFileViewer.slnx` ties the projects together. `Directory.Build.props` sets the target framework and turns warnings into errors, `Directory.Packages.props` holds every package version in one place, and `.editorconfig` holds the code style the build enforces.
 
