@@ -208,7 +208,7 @@ Pushing a tag like `v1.2.3` runs `.github/workflows/release.yml`, which builds t
 | Debian and Ubuntu (x64, Arm64) | `gcs-file-viewer_<version>_<arch>.deb` | `sudo apt install ./gcs-file-viewer_<version>_<arch>.deb`, then start it from the app menu or run `gcs-file-viewer`. |
 | Other Linux (x64, Arm64) | `GcsFileViewer-<version>-linux-<arch>.tar.gz` | Extract and run `gcs-file-viewer/GcsFileViewer`. |
 
-There is no macOS package. An app downloaded from the internet has to be signed with a paid Apple Developer ID and notarized before macOS will launch it, and this project has neither. On macOS, build it from source: see [Run](#run), or [Building a package locally](#building-a-package-locally) for a double-clickable app.
+There is no macOS package. An app downloaded from the internet has to be signed with a paid Apple Developer ID and notarized before macOS will launch it, and this project has neither. On macOS, build and run it from source: see [Run](#run).
 
 ```bash
 git tag v1.2.3
@@ -238,14 +238,6 @@ scripts/package-linux.sh linux-x64 1.2.3 dist
 ```
 
 This builds the `.tar.gz` anywhere and the `.deb` where `dpkg-deb` is installed.
-
-On macOS, this builds `GCS File Viewer.app` and zips it into `dist` (use `osx-x64` on an Intel Mac):
-
-```bash
-scripts/package-macos.sh osx-arm64 1.2.3 dist
-```
-
-Unzip it and move the app to Applications. An app built on your own Mac opens normally; the same zip sent to another Mac would be blocked there.
 
 ## Project layout
 

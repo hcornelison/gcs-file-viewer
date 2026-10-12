@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   # No macOS package: without an Apple Developer ID signature and notarization, macOS refuses to launch a
-  # downloaded app. scripts/package-macos.sh still builds one locally for the Mac it runs on.
+  # downloaded app.
   package:
     strategy:
       fail-fast: false
