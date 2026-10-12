@@ -4,6 +4,8 @@ Notable changes to GCS File Viewer. The format follows [Keep a Changelog](https:
 
 ## Unreleased
 
+## 0.1.0 - 2026-10-12
+
 First public version.
 
 ### Added
