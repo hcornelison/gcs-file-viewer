@@ -1,0 +1,101 @@
+name: Release
+
+# Pushing a tag like v1.2.3 builds the packages and publishes them as a GitHub Release.
+# Running it by hand builds the same packages as workflow artifacts, without a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rid: win-x64, os: windows-latest }
+          - { rid: win-arm64, os: windows-latest }
+          - { rid: osx-arm64, os: macos-latest }
+          - { rid: osx-x64, os: macos-latest }
+          - { rid: linux-x64, os: ubuntu-latest }
+          - { rid: linux-arm64, os: ubuntu-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Pick version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0" >> "$GITHUB_ENV"
+          fi
+
+      - name: Package for Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish src/GcsFileViewer -c Release -r ${{ matrix.rid }} --self-contained `
+            "-p:Version=$env:VERSION" -p:DebugType=embedded -o publish/GcsFileViewer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item LICENSE publish/GcsFileViewer/LICENSE.txt
+          python scripts/make-notices.py publish/GcsFileViewer
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path publish/GcsFileViewer -DestinationPath "dist/GcsFileViewer-$env:VERSION-${{ matrix.rid }}.zip"
+
+      - name: Package for macOS
+        if: runner.os == 'macOS'
+        run: scripts/package-macos.sh ${{ matrix.rid }} "$VERSION" dist
+
+      - name: Package for Linux
+        if: runner.os == 'Linux'
+        run: scripts/package-linux.sh ${{ matrix.rid }} "$VERSION" dist
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: package-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write checksums
+        working-directory: dist
+        run: |
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      # Records that these exact files were built by this workflow from this commit, so a download can be
+      # checked with `gh attestation verify`. GitHub only offers this to public repositories.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: dist/*
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag

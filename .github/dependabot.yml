@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # NuGet versions live in Directory.Packages.props; the local tools are in dotnet-tools.json.
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      avalonia:
+        patterns: ["Avalonia*"]
+      google:
+        patterns: ["Google.*"]
+      testing:
+        patterns: ["xunit*", "coverlet*", "GitHubActionsTestLogger", "Microsoft.Extensions.TimeProvider.Testing"]
+
+  # The workflows pin each action to a commit; Dependabot moves the pin and the version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

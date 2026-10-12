@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+.DS_Store
+TestResults/
+coverage/
+
+# Packages built by scripts/package-*.sh
+dist/
+publish/

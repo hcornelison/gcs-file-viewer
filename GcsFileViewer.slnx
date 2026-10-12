@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GcsFileViewer.Core/GcsFileViewer.Core.csproj" />
+    <Project Path="src/GcsFileViewer.GcloudAuth/GcsFileViewer.GcloudAuth.csproj" />
+    <Project Path="src/GcsFileViewer.Pricing/GcsFileViewer.Pricing.csproj" />
+    <Project Path="src/GcsFileViewer.Storage/GcsFileViewer.Storage.csproj" />
+    <Project Path="src/GcsFileViewer/GcsFileViewer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GcsFileViewer.Tests/GcsFileViewer.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,4 @@
+{
+  // The tests run on Microsoft.Testing.Platform (see global.json), which the Test Explorer needs to be told about.
+  "dotnet.testWindow.useTestingPlatformProtocol": true
+}

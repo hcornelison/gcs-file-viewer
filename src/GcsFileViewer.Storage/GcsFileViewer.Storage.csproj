@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Google.Cloud.ResourceManager.V3" />
+    <PackageReference Include="Google.Cloud.Storage.V1" />
+    <PackageReference Include="MimeMapping" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GcsFileViewer.GcloudAuth\GcsFileViewer.GcloudAuth.csproj" />
+    <ProjectReference Include="..\GcsFileViewer.Pricing\GcsFileViewer.Pricing.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GcsFileViewer.Tests" />
+  </ItemGroup>
+
+</Project>

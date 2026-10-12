@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.x
+
+      # A Cloud Storage emulator, so some tests can run the real client library against real API behaviour.
+      - name: Start storage emulator
+        run: |
+          docker run -d --name gcs-emulator -p 4443:4443 fsouza/fake-gcs-server:1.56.1 -scheme http -public-host localhost:4443
+          for attempt in $(seq 1 30); do
+            curl -fs http://localhost:4443/storage/v1/b >/dev/null && break
+            sleep 1
+          done
+          # The .NET client library wants the API path as part of the address.
+          echo "STORAGE_EMULATOR_HOST=http://localhost:4443/storage/v1/" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: |
+          dotnet restore
+          dotnet tool restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # The GitHub reporter writes a per-test table to the run's summary page and annotates failures. Coverage
+      # leaves out code written by source generators, such as the view models' commands and properties.
+      - name: Test
+        run: >
+          dotnet test --no-build --configuration Release
+          --report-github --report-github-summary-include-passed
+          --coverlet --coverlet-output-format cobertura --coverlet-exclude-by-attribute GeneratedCodeAttribute
+          --results-directory TestResults
+
+      # Adds line and branch coverage per class to the run's summary page, below the test results.
+      - name: Coverage report
+        run: |
+          dotnet reportgenerator "-reports:TestResults/**/coverage.cobertura*.xml" -targetdir:coverage "-reporttypes:MarkdownSummaryGithub;Html;Badges"
+          grep -v "reportgenerator.io/pro" coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+          # Pick the line coverage badge whose color matches the result: green from 80%, yellow from 60%, else red.
+          rate=$(grep -ohm1 'line-rate="[0-9.]*"' TestResults/coverage.cobertura*.xml | head -1 | cut -d'"' -f2)
+          color=$(awk -v r="$rate" 'BEGIN { print (r >= 0.8) ? "brightgreen" : (r >= 0.6) ? "yellow" : "red" }')
+          cp "coverage/badge_shieldsio_linecoverage_$color.svg" coverage/badge.svg
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: coverage-report
+          path: coverage
+
+  # Publishes the coverage badge shown in the README to the "badges" branch, which holds nothing else.
+  coverage-badge:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: coverage-report
+          path: ${{ runner.temp }}/coverage
+
+      - name: Push badge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin badges:badges 2>/dev/null; then
+            git worktree add "$RUNNER_TEMP/badges" badges
+          else
+            git worktree add --orphan -b badges "$RUNNER_TEMP/badges"
+          fi
+          cp "$RUNNER_TEMP/coverage/badge.svg" "$RUNNER_TEMP/badges/coverage.svg"
+          cd "$RUNNER_TEMP/badges"
+          git add coverage.svg
+          git diff --cached --quiet || git commit -m "Update coverage badge"
+          git push origin badges

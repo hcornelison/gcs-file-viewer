@@ -1,0 +1,42 @@
+name: Bug report
+description: Something doesn't work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please don't include credentials, access tokens or private bucket names.
+        Security problems should be reported privately; see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Include any message the app showed.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: The release you installed, or the commit if you built it yourself.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: dropdown
+    id: sign-in
+    attributes:
+      label: How were you signed in?
+      options:
+        - gcloud CLI login
+        - Application Default Credentials
+        - Service account key file
+        - Not signed in (public bucket by name)
+        - Not sure
+    validations:
+      required: true

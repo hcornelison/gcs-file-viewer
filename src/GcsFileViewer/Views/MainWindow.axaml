@@ -1,0 +1,444 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:GcsFileViewer.ViewModels;assembly=GcsFileViewer.Core"
+        xmlns:s="clr-namespace:GcsFileViewer.Storage;assembly=GcsFileViewer.Storage"
+        xmlns:c="using:GcsFileViewer.Converters"
+        x:Class="GcsFileViewer.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="GCS File Viewer"
+        Icon="/Assets/icon.ico"
+        Width="1100" Height="700"
+        MinWidth="720" MinHeight="420">
+
+  <Window.Resources>
+    <StreamGeometry x:Key="BackIcon">M10,3 L3,10 L10,17 L10,12 L17,12 L17,8 L10,8 Z</StreamGeometry>
+    <StreamGeometry x:Key="ForwardIcon">M10,3 L17,10 L10,17 L10,12 L3,12 L3,8 L10,8 Z</StreamGeometry>
+    <StreamGeometry x:Key="UpIcon">M3,10 L10,3 L17,10 L12,10 L12,17 L8,17 L8,10 Z</StreamGeometry>
+    <StreamGeometry x:Key="RefreshIcon">M10,4 A6,6 0 1 0 16,10 L14,10 A4,4 0 1 1 10,6 L10,9 L15,5 L10,1 Z</StreamGeometry>
+
+    <SolidColorBrush x:Key="DropTargetBrush" Color="{DynamicResource SystemAccentColor}" Opacity="0.35" />
+    <SolidColorBrush x:Key="ScrimBrush" Color="#99000000" />
+    <SolidColorBrush x:Key="ErrorBrush" Color="#E5484D" />
+    <SolidColorBrush x:Key="WarningBrush" Color="#D9822B" />
+    <BoxShadows x:Key="DialogShadow">0 8 32 0 #66000000</BoxShadows>
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="Button.nav">
+      <Setter Property="Width" Value="32" />
+      <Setter Property="Height" Value="32" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.nav PathIcon">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Height" Value="14" />
+    </Style>
+    <Style Selector="Button.crumb">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="6,3" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.statusBar">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="TextBlock.heading">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Opacity" Value="0.6" />
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- A dialog is a scrim over the whole window with a card centred on it. -->
+    <Style Selector="Border.scrim">
+      <Setter Property="Grid.Row" Value="0" />
+      <Setter Property="Grid.RowSpan" Value="3" />
+      <Setter Property="Background" Value="{DynamicResource ScrimBrush}" />
+    </Style>
+    <Style Selector="Border.dialog">
+      <Setter Property="Padding" Value="24" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundAltHighBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BoxShadow" Value="{DynamicResource DialogShadow}" />
+    </Style>
+    <Style Selector="Border.dialog TextBlock.title">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- Where dragged items would land: a folder row, a sidebar bucket or a breadcrumb. -->
+    <Style Selector="DataGridRow.dropTarget">
+      <Setter Property="Background" Value="{DynamicResource DropTargetBrush}" />
+    </Style>
+    <Style Selector="ListBoxItem.dropTarget /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource DropTargetBrush}" />
+    </Style>
+    <Style Selector="Button.dropTarget /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource DropTargetBrush}" />
+    </Style>
+  </Window.Styles>
+
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Alt+Left" Command="{Binding BackCommand}" />
+    <KeyBinding Gesture="Alt+Right" Command="{Binding ForwardCommand}" />
+    <KeyBinding Gesture="Alt+Up" Command="{Binding UpCommand}" />
+    <KeyBinding Gesture="F5" Command="{Binding RefreshCommand}" />
+    <KeyBinding Gesture="Meta+R" Command="{Binding RefreshCommand}" />
+  </Window.KeyBindings>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- Toolbar: navigation, address bar, filter -->
+    <Border Grid.Row="0" Padding="8,6"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
+          <Button Classes="nav" Command="{Binding BackCommand}" ToolTip.Tip="Back (Alt+Left)">
+            <PathIcon Data="{StaticResource BackIcon}" />
+          </Button>
+          <Button Classes="nav" Command="{Binding ForwardCommand}" ToolTip.Tip="Forward (Alt+Right)">
+            <PathIcon Data="{StaticResource ForwardIcon}" />
+          </Button>
+          <Button Classes="nav" Command="{Binding UpCommand}" ToolTip.Tip="Up (Alt+Up)">
+            <PathIcon Data="{StaticResource UpIcon}" />
+          </Button>
+          <Button Classes="nav" Command="{Binding RefreshCommand}" ToolTip.Tip="Refresh (F5)">
+            <PathIcon Data="{StaticResource RefreshIcon}" />
+          </Button>
+        </StackPanel>
+
+        <Border Grid.Column="1" CornerRadius="4" Padding="4,0" Height="32"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}" BorderThickness="1">
+          <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Crumbs}" VerticalAlignment="Center" DragDrop.AllowDrop="True">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:Crumb">
+                  <StackPanel Orientation="Horizontal">
+                    <Button Classes="crumb" Content="{Binding Label}" Click="Crumb_Click" />
+                    <TextBlock Text="›" Opacity="0.5" VerticalAlignment="Center" Margin="2,0" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Border>
+
+        <Button Grid.Column="2" Content="Upload…" Height="32" VerticalContentAlignment="Center"
+                Click="Upload_Click" IsEnabled="{Binding IsInFolder}"
+                ToolTip.Tip="Upload files to this folder (or drop them on the list)" />
+
+        <Button Grid.Column="3" Content="New folder" Height="32" VerticalContentAlignment="Center"
+                Command="{Binding NewFolderCommand}" IsEnabled="{Binding IsInFolder}" />
+
+        <TextBox Grid.Column="4" Width="230" Height="32" PlaceholderText="Filter, or Enter to search subfolders"
+                 Text="{Binding Filter}" VerticalContentAlignment="Center"
+                 ToolTip.Tip="Typing narrows this folder. Press Enter to search every folder under it; names are case-sensitive and wildcards (*, ?) work.">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+
+        <ToggleButton Grid.Column="5" Content="Details" Height="32" VerticalContentAlignment="Center"
+                      IsChecked="{Binding Details.IsVisible}"
+                      ToolTip.Tip="Show the selected item's properties and a preview" />
+
+        <ToggleButton x:Name="DarkModeToggle" Grid.Column="6" Content="Dark" Height="32" VerticalContentAlignment="Center"
+                      IsCheckedChanged="DarkModeToggle_IsCheckedChanged"
+                      ToolTip.Tip="Switch between the light and dark themes" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="230,Auto,*,Auto">
+
+      <!-- Sidebar: project and its buckets -->
+      <DockPanel Grid.Column="0">
+        <StackPanel DockPanel.Dock="Top" Margin="12,12,12,4" Spacing="2">
+          <TextBlock Classes="heading" Text="PROJECT" />
+          <TextBlock Text="{Binding ProjectId, TargetNullValue='None'}" FontWeight="SemiBold"
+                     TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding ProjectId}" />
+          <Button Content="Open project or bucket…" Command="{Binding Connect.ShowCommand}"
+                  Padding="0" Background="Transparent" FontSize="12"
+                  Foreground="{DynamicResource SystemAccentColor}" />
+          <TextBlock Classes="heading" Text="BUCKETS" Margin="0,12,0,0" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Buckets}" SelectedItem="{Binding SelectedBucket}"
+                 Background="Transparent" Padding="4,0" DragDrop.AllowDrop="True">
+          <ListBox.Styles>
+            <Style Selector="ListBoxItem">
+              <Setter Property="Padding" Value="8,6" />
+              <Setter Property="CornerRadius" Value="4" />
+            </Style>
+          </ListBox.Styles>
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="s:BrowserItem">
+              <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding Name}">
+                <PathIcon Data="{Binding Kind, Converter={x:Static c:ItemIcons.Geometry}}"
+                          Foreground="{Binding Kind, Converter={x:Static c:ItemIcons.Brush}}" Width="15" Height="15" />
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <GridSplitter Grid.Column="1" Width="1" ResizeDirection="Columns"
+                    Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+
+      <!-- File list -->
+      <DataGrid x:Name="FileGrid" Grid.Column="2"
+                ItemsSource="{Binding Items}"
+                IsReadOnly="True"
+                AutoGenerateColumns="False"
+                CanUserResizeColumns="True"
+                CanUserReorderColumns="True"
+                CanUserSortColumns="True"
+                GridLinesVisibility="None"
+                HeadersVisibility="Column"
+                SelectionMode="Extended"
+                ClipboardCopyMode="None"
+                RowHeight="30"
+                BorderThickness="0"
+                DragDrop.AllowDrop="True"
+                DoubleTapped="FileGrid_DoubleTapped"
+                KeyDown="FileGrid_KeyDown"
+                SelectionChanged="FileGrid_SelectionChanged">
+        <DataGrid.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="Open" Click="Open_Click" />
+            <MenuItem Header="Download…" Click="Download_Click" />
+            <MenuItem Header="Copy gs:// URI" Click="CopyUri_Click" />
+            <MenuItem Header="Calculate size" Command="{Binding MeasureSelectedCommand}" />
+            <MenuItem Header="Open containing folder" Command="{Binding OpenContainingFolderOfSelectedCommand}" />
+            <Separator />
+            <MenuItem Header="Cut" Command="{Binding CutSelectedCommand}" />
+            <MenuItem Header="Copy" Command="{Binding CopySelectedCommand}" />
+            <MenuItem Header="Paste" Command="{Binding PasteCommand}" />
+            <Separator />
+            <MenuItem Header="Upload files here…" Click="Upload_Click" IsEnabled="{Binding IsInFolder}" />
+            <MenuItem Header="Upload folders here…" Click="UploadFolder_Click" IsEnabled="{Binding IsInFolder}" />
+            <MenuItem Header="New folder…" Command="{Binding NewFolderCommand}" IsEnabled="{Binding IsInFolder}" />
+            <MenuItem Header="Rename…" Command="{Binding RenameSelectedCommand}" />
+            <MenuItem Header="Delete…" Command="{Binding DeleteSelectedCommand}" />
+          </ContextMenu>
+        </DataGrid.ContextMenu>
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="Name" Width="3*" SortMemberPath="SortKey" x:DataType="s:BrowserItem">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="s:BrowserItem">
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="10,0">
+                  <PathIcon Data="{Binding Kind, Converter={x:Static c:ItemIcons.Geometry}}"
+                            Foreground="{Binding Kind, Converter={x:Static c:ItemIcons.Brush}}" Width="16" Height="16" />
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <!-- Shown only for search results, which come from many folders. -->
+          <DataGridTextColumn Header="Folder" Width="2*" x:DataType="s:BrowserItem" IsVisible="False"
+                              Binding="{Binding ParentPath}" />
+          <DataGridTextColumn Header="Size" Width="110" x:DataType="s:BrowserItem"
+                              Binding="{Binding SizeDisplay}" SortMemberPath="Size" />
+          <DataGridTextColumn Header="Type" Width="1.5*" x:DataType="s:BrowserItem"
+                              Binding="{Binding Type}" />
+          <DataGridTextColumn Header="Modified" Width="170" x:DataType="s:BrowserItem"
+                              Binding="{Binding ModifiedDisplay}" SortMemberPath="Modified" />
+          <DataGridTextColumn Header="Storage class" Width="130" x:DataType="s:BrowserItem"
+                              Binding="{Binding StorageClass}" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <TextBlock Grid.Column="2" Text="Nothing here" Opacity="0.5" IsHitTestVisible="False"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                 IsVisible="{Binding IsEmpty}" />
+
+      <!-- Details: properties of the selection, an editor for two of them, and a preview -->
+      <Border Grid.Column="3" Width="340" DataContext="{Binding Details}" x:DataType="vm:DetailsViewModel"
+              IsVisible="{Binding IsVisible}"
+              BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1,0,0,0">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="14" Spacing="12">
+            <TextBlock Text="{Binding Title}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+            <ItemsControl ItemsSource="{Binding Lines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:DetailLine">
+                  <StackPanel Margin="0,0,0,8">
+                    <TextBlock Classes="caption" Text="{Binding Label}" />
+                    <SelectableTextBlock Text="{Binding Value}" FontSize="12" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Spacing="6" IsVisible="{Binding CanEdit}">
+              <TextBlock Classes="heading" Text="EDIT" />
+              <TextBlock Classes="caption" Text="Content type" />
+              <TextBox Text="{Binding EditContentType}" FontSize="12" PlaceholderText="e.g. text/plain" />
+              <TextBlock Classes="caption" Text="Cache-Control" />
+              <TextBox Text="{Binding EditCacheControl}" FontSize="12" PlaceholderText="e.g. public, max-age=3600" />
+              <Button Content="Save" Command="{Binding SaveCommand}" HorizontalAlignment="Right" />
+            </StackPanel>
+
+            <TextBlock Classes="heading" Text="PREVIEW" />
+            <Image x:Name="PreviewImage" MaxHeight="320" Stretch="Uniform" HorizontalAlignment="Left"
+                   IsVisible="{Binding PreviewImage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Border IsVisible="{Binding PreviewText, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="1"
+                    CornerRadius="4" Padding="8">
+              <ScrollViewer MaxHeight="360" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock Text="{Binding PreviewText}" FontFamily="Menlo,Consolas,DejaVu Sans Mono,monospace"
+                                     FontSize="11" />
+              </ScrollViewer>
+            </Border>
+            <TextBlock Text="{Binding PreviewNote}" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                       IsVisible="{Binding PreviewNote, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+    </Grid>
+
+    <!-- Status bar -->
+    <Border Grid.Row="2" Padding="12,5"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="12">
+        <TextBlock Grid.Column="0" Text="{Binding Status}" FontSize="12" TextTrimming="CharacterEllipsis"
+                   VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="statusBar" Content="Load more"
+                Command="{Binding LoadMoreCommand}" IsVisible="{Binding HasMore}"
+                ToolTip.Tip="This folder has more items than are shown. They also load as you scroll down." />
+        <ProgressBar Grid.Column="2" Width="140" MinWidth="0" Height="4" VerticalAlignment="Center"
+                     Maximum="1" Value="{Binding ProgressValue}"
+                     IsIndeterminate="{Binding IsProgressIndeterminate}" IsVisible="{Binding IsBusy}" />
+        <Button Grid.Column="3" Classes="statusBar" Content="Cancel"
+                Command="{Binding CancelCommand}" IsVisible="{Binding IsCancellable}" />
+
+        <!-- Session cost estimate; click for the breakdown -->
+        <Button Grid.Column="4" Classes="statusBar" Content="{Binding Cost.Summary}" Background="Transparent"
+                ToolTip.Tip="Estimated Cloud Storage charges for this session. Click for details.">
+          <Button.Flyout>
+            <Flyout Placement="TopEdgeAlignedRight">
+              <StackPanel Width="380" Spacing="10" DataContext="{Binding Cost}" x:DataType="vm:CostViewModel">
+                <TextBlock Text="Estimated cost this session" FontWeight="SemiBold" />
+                <ItemsControl ItemsSource="{Binding Lines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CostLine">
+                      <Grid ColumnDefinitions="*,Auto,80" ColumnSpacing="12" Margin="0,2">
+                        <TextBlock Grid.Column="0" Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Quantity}" Opacity="0.75" />
+                        <TextBlock Grid.Column="2" Text="{Binding Cost}" TextAlignment="Right" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding Warning}" Foreground="{DynamicResource WarningBrush}" TextWrapping="Wrap"
+                           FontSize="12"
+                           IsVisible="{Binding Warning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="caption" Text="{Binding PricingNote}" TextWrapping="Wrap" />
+                <Button Content="Reset" Command="{Binding ResetCommand}" HorizontalAlignment="Right" />
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- Project or bucket prompt -->
+    <Border Classes="scrim" DataContext="{Binding Connect}" x:DataType="vm:ConnectViewModel"
+            IsVisible="{Binding IsVisible}">
+      <Border Classes="dialog" Width="460">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="title" Text="Open a Google Cloud project" />
+          <TextBlock Text="Enter or pick the project whose Cloud Storage buckets you want to browse."
+                     TextWrapping="Wrap" Opacity="0.75" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <AutoCompleteBox x:Name="ProjectBox" Grid.Column="0"
+                             ItemsSource="{Binding Projects}"
+                             Text="{Binding ProjectInput, Mode=TwoWay}"
+                             PlaceholderText="Project ID, e.g. my-project-123"
+                             FilterMode="Contains"
+                             MinimumPrefixLength="0" />
+            <Button Grid.Column="1" Content="Connect" Classes="accent" MinWidth="80"
+                    HorizontalContentAlignment="Center"
+                    IsDefault="{Binding IsVisible}" Command="{Binding ConnectCommand}" />
+          </Grid>
+          <TextBlock Text="Or open a bucket by name" FontWeight="SemiBold" Margin="0,8,0,0" />
+          <TextBlock Text="Works for public buckets and for buckets in projects you can't list. No project needed."
+                     TextWrapping="Wrap" Opacity="0.75" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Grid.Column="0" Text="{Binding BucketInput}" PlaceholderText="Bucket name or gs:// URI">
+              <TextBox.KeyBindings>
+                <KeyBinding Gesture="Enter" Command="{Binding OpenBucketCommand}" />
+              </TextBox.KeyBindings>
+            </TextBox>
+            <Button Grid.Column="1" Content="Open" MinWidth="80" HorizontalContentAlignment="Center"
+                    Command="{Binding OpenBucketCommand}" />
+          </Grid>
+          <TextBlock Classes="error" Text="{Binding Error}"
+                     IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <TextBlock Classes="caption" Text="{Binding CredentialSource}" />
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <Button Grid.Column="0" Content="Use key file…" Click="UseKeyFile_Click" />
+            <ProgressBar Grid.Column="1" IsIndeterminate="True" MinWidth="0" Height="4" Margin="8,0"
+                         VerticalAlignment="Center" IsVisible="{Binding IsConnecting}" />
+            <Button Grid.Column="2" Content="Cancel" IsCancel="{Binding IsVisible}" Command="{Binding CancelCommand}" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Name prompt for new folders and renaming -->
+    <Border Classes="scrim" DataContext="{Binding Dialogs}" x:DataType="vm:DialogsViewModel"
+            IsVisible="{Binding IsPromptVisible}">
+      <Border Classes="dialog" Width="420">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="title" Text="{Binding PromptTitle}" />
+          <TextBox x:Name="PromptBox" Text="{Binding PromptText}" PlaceholderText="Name" />
+          <TextBlock Classes="error" Text="{Binding PromptError}"
+                     IsVisible="{Binding PromptError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Cancel" IsCancel="{Binding IsPromptVisible}" Command="{Binding RejectPromptCommand}" />
+            <Button Content="{Binding PromptAction}" Classes="accent" IsDefault="{Binding IsPromptVisible}"
+                    Command="{Binding AcceptPromptCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Confirmation for replacing and deleting -->
+    <Border Classes="scrim" DataContext="{Binding Dialogs}" x:DataType="vm:DialogsViewModel"
+            IsVisible="{Binding IsConfirmVisible}">
+      <Border Classes="dialog" Width="420">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="title" Text="{Binding ConfirmTitle}" />
+          <TextBlock Text="{Binding ConfirmMessage}" TextWrapping="Wrap" Opacity="0.75" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+            <Button Content="Cancel" IsCancel="{Binding IsConfirmVisible}" IsDefault="{Binding IsConfirmVisible}"
+                    Command="{Binding RejectConfirmCommand}" />
+            <Button Content="{Binding ConfirmAction}" Classes="accent" Command="{Binding AcceptConfirmCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+</Window>

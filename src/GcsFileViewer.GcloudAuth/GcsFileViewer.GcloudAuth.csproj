@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GcsFileViewer.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+
+    <!-- An xUnit v3 test project is a program that runs its own tests. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.MTP" />
+    <PackageReference Include="GitHubActionsTestLogger" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GcsFileViewer.Core\GcsFileViewer.Core.csproj" />
+  </ItemGroup>
+
+</Project>

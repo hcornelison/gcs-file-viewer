@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>GcsFileViewer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GcsFileViewer.Storage\GcsFileViewer.Storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GcsFileViewer.Tests" />
+  </ItemGroup>
+
+</Project>
